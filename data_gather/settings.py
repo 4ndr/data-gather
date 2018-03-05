@@ -81,12 +81,8 @@ WSGI_APPLICATION = 'data_gather.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'ENGINE': 'django.db.backends.sqlite3',
         'NAME': 'data_gather',
-        'USER': 'postgres',
-        'PASSWORD': 'postgres',
-        'HOST': '127.0.0.1',
-        'PORT': '5432',
     }
 }
 
