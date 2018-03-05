@@ -1,15 +1,19 @@
 import json
+import requests
 
 from django.shortcuts import render
 
 # Create your views here.
 
 def base(request):
-    json_data1 = open('core/static/data/smartcitizen/world_map.json')
-    json_data2 = open('core/static/data/lass/all_lass.json')
-    json_data3 = open('core/static/data/openaq/measurements_1000.json')
-    data1 = json.dumps(json.load(json_data1))
-    data2 = json.dumps(json.load(json_data2))
-    data3 = json.dumps(json.load(json_data3))
-    data = {'data1': data1, 'data2': data2, 'data3': data3, }
+    smartcitizen = requests.get('https://api.smartcitizen.me/v0/devices/world_map')
+    smartcitizen_data = json.dumps(smartcitizen.json())
+
+    lass = requests.get('https://pm25.lass-net.org/data/last-all-lass.json')
+    lass_data = json.dumps(lass.json())
+
+    openaq = requests.get('https://api.openaq.org/v1/measurements')
+    openaq_data = json.dumps(openaq.json())
+
+    data = {'data1': smartcitizen_data, 'data2': lass_data, 'data3': openaq_data, }
     return render(request, 'base.html', data)
