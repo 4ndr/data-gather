@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # TODO: Set to URL of git repo.
-PROJECT_GIT_URL='https://github.com/4ndr/rest_api.git'
+PROJECT_GIT_URL='https://github.com/4ndr/data_gather.git'
 
 PROJECT_BASE_PATH='/usr/local/apps'
 VIRTUALENV_BASE_PATH='/usr/local/virtualenvs'
@@ -18,27 +18,27 @@ pip install --upgrade pip
 pip install virtualenv
 
 mkdir -p $PROJECT_BASE_PATH
-git clone $PROJECT_GIT_URL $PROJECT_BASE_PATH/profiles-rest-api
+git clone $PROJECT_GIT_URL $PROJECT_BASE_PATH/data_gather
 
 mkdir -p $VIRTUALENV_BASE_PATH
-virtualenv --python=python3 $VIRTUALENV_BASE_PATH/profiles_api
+virtualenv --python=python3 $VIRTUALENV_BASE_PATH/data_gather
 
-source $VIRTUALENV_BASE_PATH/profiles_api/bin/activate
-pip install -r $PROJECT_BASE_PATH/profiles-rest-api/requirements.txt
+source $VIRTUALENV_BASE_PATH/data_gather/bin/activate
+pip install -r $PROJECT_BASE_PATH/data_gather/requirements.txt
 
 # Run migrations
-cd $PROJECT_BASE_PATH/profiles-rest-api/
+cd $PROJECT_BASE_PATH/data_gather/
 
 # Setup Supervisor to run our uwsgi process.
-cp $PROJECT_BASE_PATH/profiles-rest-api/deploy/supervisor_profiles_api.conf /etc/supervisor/conf.d/profiles_api.conf
+cp $PROJECT_BASE_PATH/data_gather/deploy/supervisor_data_gather.conf /etc/supervisor/conf.d/data_gather.conf
 supervisorctl reread
 supervisorctl update
-supervisorctl restart profiles_api
+supervisorctl restart data_gather
 
 # Setup nginx to make our application accessible.
-cp $PROJECT_BASE_PATH/profiles-rest-api/deploy/nginx_profiles_api.conf /etc/nginx/sites-available/profiles_api.conf
+cp $PROJECT_BASE_PATH/data_gather/deploy/nginx_data_gather.conf /etc/nginx/sites-available/data_gather.conf
 rm /etc/nginx/sites-enabled/default
-ln -s /etc/nginx/sites-available/profiles_api.conf /etc/nginx/sites-enabled/profiles_api.conf
+ln -s /etc/nginx/sites-available/data_gather.conf /etc/nginx/sites-enabled/data_gather.conf
 systemctl restart nginx.service
 
 echo "DONE! :)"
