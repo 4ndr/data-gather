@@ -102,6 +102,7 @@ body {
  * Footer
  */
 .mastfoot {
+    padding-top: 20px;
     color: rgba(255, 255, 255, .5);
     box-shadow: 0 0 5rem rgba(0, 0, 0, .5);
 }

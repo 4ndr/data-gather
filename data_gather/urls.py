@@ -19,6 +19,6 @@ from django.conf.urls import url
 from core import views
 
 urlpatterns = [
-    url('admin/', admin.site.urls),
-    url('', views.base),
+    url(r'^$', views.base, name='index'),
+    url(r'^admin/', admin.site.urls),
 ]
