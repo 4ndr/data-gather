@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+    <h1 class="cover-heading">Data Gather</h1>
+    <p class="lead">Data Gather is a ongoing project, aiming to collect open data from air quality sensors</p>
+    <div class="row">
+        <div id="mapid" class="col-sm-10 offset-md-1"></div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <p class="lead">Check the project at Github
+            <a href="https://github.com/4ndr/data-gather"><img src="{% static 'logos/GitHub-Mark-Light-120px-plus.png' %}" height="20px"></a>
+            </p>
+        </div>
+    </div>
+{% endblock %}
+
+
+{% block leafletmapjs %}
+    {{ csrf_token }}
+    <script>
+        $(document).ready(function () {
+            var json_data1;
+            var json_data2;
+            var json_data3;
+            $.ajax({
+                url: '/map/',
+                dataType: 'json',
+                type: 'POST',
+                data: {csrfmiddlewaretoken: '{{ csrf_token }}' },
+                success: function (data) {
+
+                    json_data1 = JSON.parse(data['data1']);
+                    json_data2 = JSON.parse(data['data2']);
+                    json_data3 = JSON.parse(data['data3']);
+                }
+            }).done(function () {
+
+
+
+
+                {#var json_data1 = JSON.parse('{{ data1 | escapejs }}');#}
+
+                var mymap = L.map('mapid').setView([21.505, -0.09], 2);
+
+                L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
+                    attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
+                    maxZoom: 18,
+                    id: 'mapbox.streets',
+                    accessToken: 'pk.eyJ1IjoiYW5kcmVwbCIsImEiOiJjaXVnNzZmYmEwMGZyMnlueXMxZjA3NXJnIn0.0zKGPE-sI6MuPRlYlpMLPA'
+                }).addTo(mymap);
+
+                var markerClusters = L.markerClusterGroup();
+
+                {#for (var i = 0; i < json_data1.length; i++) {#}
+                {##}
+                {#    var latitude = json_data1[i]['latitude'];#}
+                {#    var longitude = json_data1[i]['longitude'];#}
+                {##}
+                {#    if ((latitude != null) && (longitude != null)){#}
+                {##}
+                {#        var sensors = '';#}
+                {#        sensors += '<p>' + "Temperature" + ': ' + json_data1[i]['data']['12'] + '</p>';#}
+                {#        sensors += '<p>' + "Humidity" + ': ' + json_data1[i]['data']['13'] + '</p>';#}
+                {#        sensors += '<p>' + "no2" + ': ' + json_data1[i]['data']['15'] + '</p>';#}
+                {#        sensors += '<p>' + "co" + ': ' + json_data1[i]['data']['16'] + '</p>';#}
+                {##}
+                {#        var mymarker = new L.marker(L.latLng(parseFloat(latitude), parseFloat(longitude)))#}
+                {#        .bindPopup(sensors);#}
+                {##}
+                {#        markerClusters.addLayer(mymarker);#}
+                {#    }#}
+                {##}
+                {# }#}
+                {##}
+                {#mymap.addLayer(markerClusters);#}
+
+
+
+                {#var json_data2 = JSON.parse('{{ data2 | escapejs }}');#}
+
+
+
+                for (var i = 0; i < json_data2['feeds'].length; i++) {
+                    var latitude = json_data2['feeds'][i]['gps_lat'];
+                    var longitude = json_data2['feeds'][i]['gps_lon'];
+
+
+                    if ((latitude != null) && (longitude != null)){
+
+                        var sensors = '';
+                        sensors += '<p>' + "sd0" + ': ' + json_data2['feeds'][i]['s_d0'] + '</p>';
+                        sensors += '<p>' + "sd1" + ': ' + json_data2['feeds'][i]['s_d1'] + '</p>';
+
+                        var mymarker = new L.marker(L.latLng(parseFloat(latitude), parseFloat(longitude)))
+                        .bindPopup(sensors);
+
+                        markerClusters.addLayer(mymarker);
+                    }
+
+                 }
+                mymap.addLayer(markerClusters);
+
+
+
+                {#var json_data3 = JSON.parse('{{ data3 | escapejs }}');#}
+
+                for (var i = 0; i < json_data3['results'].length; i++) {
+
+                    if (json_data3['results'][i]['coordinates']){
+
+                        var sensors = '';
+                        sensors += '<p>' + json_data3['results'][i]['parameter'] + ': ' + json_data3['results'][i]['value'] + '</p>';
+
+                        var mymarker = new L.marker(L.latLng(parseFloat(json_data3['results'][i]['coordinates']['latitude']), parseFloat(json_data3['results'][i]['coordinates']['longitude'])))
+                        .bindPopup(sensors);
+
+                        markerClusters.addLayer(mymarker);
+                    }
+
+                 }
+                mymap.addLayer(markerClusters);
+
+
+
+
+
+            });
+        });
+
+
+
+
+
+
+    </script>
+{% endblock %}
