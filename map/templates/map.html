@@ -4,13 +4,28 @@
 {% block content %}
     <h1 class="cover-heading">Data Gather</h1>
     <p class="lead">Data Gather is a ongoing project, aiming to collect open data from air quality sensors</p>
+
     <div class="row">
-        <div id="mapid" class="col-sm-10 offset-md-1"></div>
+        <div id="mapid" class="col-12"></div>
     </div>
+
+    <div class="row mb-2 mt-2 pb-2 pt-2">
+        <div class="col-12">
+            <div class="card bg-light ">
+                <div class="card-body">
+                    <h5 class="card-title">Filters</h5>
+                    <p class="card-text">Select a filter:</p>
+                    <button id="#regularMap" onclick="loadRegularMap()" class="btn btn-primary">Regular Map</button>
+                    <button id="#heatMapTemperature" onclick="buildHeatMap()" class="btn btn-primary">Heat Map - Temperature</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <div class="col">
             <p class="lead">Check the project at Github
-            <a href="https://github.com/4ndr/data-gather"><img src="{% static 'logos/GitHub-Mark-Light-120px-plus.png' %}" height="20px"></a>
+            <a href="https://github.com/4ndr/data-gather"><img src="{% static 'logos/GitHub-Mark-120px-plus.png' %}" height="20px"></a>
             </p>
         </div>
     </div>
@@ -20,8 +35,91 @@
 {% block leafletmapjs %}
     <script src="{% static 'plot_map/mymap.js' %}"></script>
     <script>
+
         $(document).ready(function () {
             buildMap();
+            loadRegularMap();
+
+        });
+
+        function buildHeatMap() {
+            mymap.off();
+            mymap.remove();
+            var cfg = {
+                // radius should be small ONLY if scaleRadius is true (or small radius is intended)
+                // if scaleRadius is false it will be the constant radius used in pixels
+                "radius": 25,
+                "maxOpacity": 1,
+                // scales the radius based on map zoom
+                "scaleRadius": false,
+                // if set to false the heatmap uses the global maximum for colorization
+                // if activated: uses the data maximum within the current map boundaries
+                //   (there will always be a red spot with useLocalExtremas true)
+                "useLocalExtrema": true,
+                // which field name in your data represents the latitude - default "lat"
+                latField: 'lat',
+                // which field name in your data represents the longitude - default "lng"
+                lngField: 'lng',
+                // which field name in your data represents the data value - default "value"
+                valueField: 'temperature'
+            };
+
+            var heatmapLayer = new HeatmapOverlay(cfg);
+
+            mymap = new L.Map('mapid', {
+                center: new L.LatLng(0.1, -0.1),
+                zoom: 2,
+                layers: [heatmapLayer]
+            });
+
+            L.tileLayer(
+                'https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
+                    attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
+                    maxZoom: 18,
+                    id: 'mapbox.streets',
+                    accessToken: 'pk.eyJ1IjoiYW5kcmVwbCIsImEiOiJjaXVnNzZmYmEwMGZyMnlueXMxZjA3NXJnIn0.0zKGPE-sI6MuPRlYlpMLPA'
+                }).addTo(mymap);
+
+            SmartCitizenHeatMap(heatmapLayer);
+
+        }
+
+        function SmartCitizenHeatMap(heatmapLayer) {
+
+            var jsonData;
+            var data_return;
+            $.ajax({
+                url: '/map/1',
+                dataType: 'json',
+                type: 'POST',
+                data: {csrfmiddlewaretoken: '{{ csrf_token }}' },
+                success: function (data) {
+                    jsonData = JSON.parse(data['data']);
+                }
+            }).done(function () {
+                data_return = {
+                    max: 40,
+                    data: []
+                };
+
+                for (var i = 0; i < jsonData.length; i++) {
+
+                    var latitude = jsonData[i]['data']['location']['latitude'];
+                    var longitude = jsonData[i]['data']['location']['longitude'];
+                    var temperature = jsonData[i]['data']['sensors'][2]['value'];
+
+                    if ((latitude != null) && (longitude != null && (temperature != null))){
+
+                        data_return.data.push({lat: latitude, lng: longitude, temperature: temperature});
+
+                    }
+                }
+                heatmapLayer.setData(data_return);
+            });
+        }
+
+        function loadRegularMap(){
+            {#mymap.remove();#}
             var json_data;
             $.ajax({
                 url: '/map/1',
@@ -64,7 +162,7 @@
                 plotOpenAQ(json_data);
 
             });
-        });
+        }
 
     </script>
 

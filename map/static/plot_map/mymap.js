@@ -13,6 +13,7 @@ function buildMap(lat = 0.01, lon = -0.01, viewLevel = 2) {
     }).addTo(mymap);
 }
 
+
 function plotSmartCitizen(jsonData) {
     var markerClusters = L.markerClusterGroup();
     for (var i = 0; i < jsonData.length; i++) {
