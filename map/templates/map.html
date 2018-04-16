@@ -17,6 +17,7 @@
                     <p class="card-text">Select a filter:</p>
                     <button id="#regularMap" onclick="loadRegularMap()" class="btn btn-primary">Regular Map</button>
                     <button id="#heatMapTemperature" onclick="buildHeatMap()" class="btn btn-primary">Heat Map - Temperature</button>
+                    <input class="form-group" type="datetime-local" id="#data-filter" onchange="buildMapTime(event)" title="Date filter">
                 </div>
             </div>
         </div>
@@ -42,6 +43,13 @@
             loadRegularMap();
 
         });
+
+        function buildMapTime(date){
+            mymap.off();
+            mymap.remove();
+            buildMap();
+            loadRegularMap(date.target.value);
+        }
 
         function buildHeatMap() {
             mymap.off();
@@ -90,7 +98,7 @@
             var jsonData;
             var data_return;
             $.ajax({
-                url: '/map/1',
+                url: '/map/1/',
                 dataType: 'json',
                 type: 'POST',
                 data: {csrfmiddlewaretoken: '{{ csrf_token }}' },
@@ -119,50 +127,102 @@
             });
         }
 
-        function loadRegularMap(){
-            {#mymap.remove();#}
-            var json_data;
-            $.ajax({
-                url: '/map/1',
-                dataType: 'json',
-                type: 'POST',
-                data: {csrfmiddlewaretoken: '{{ csrf_token }}' },
-                success: function (data) {
-                    json_data = JSON.parse(data['data']);
-                }
-            }).done(function () {
+        function loadRegularMap(date){
+            if (date != null){
+                var d = new Date(date);
+                day = d.getDate();
+                month = d.getMonth() + 1;
+                if (month < 10){ month = '0' + month;}
+                year = d.getFullYear();
+                console.log(day + month + year);
 
-                plotSmartCitizen(json_data);
+                var json_data;
+                $.ajax({
+                    url: '/map/1/'+year+'-'+month+'-'+day+'/',
+                    dataType: 'json',
+                    type: 'POST',
+                    data: {csrfmiddlewaretoken: '{{ csrf_token }}'},
+                    success: function (data) {
+                        json_data = JSON.parse(data['data']);
+                    }
+                }).done(function () {
 
-            });
+                    plotSmartCitizen(json_data);
 
-            $.ajax({
-                url: '/map/2',
-                dataType: 'json',
-                type: 'POST',
-                data: {csrfmiddlewaretoken: '{{ csrf_token }}' },
-                success: function (data) {
-                    json_data = JSON.parse(data['data']);
-                }
-            }).done(function () {
+                });
 
-                plotLASS(json_data);
+                $.ajax({
+                    url: '/map/2/'+year+'-'+month+'-'+day+'/',
+                    dataType: 'json',
+                    type: 'POST',
+                    data: {csrfmiddlewaretoken: '{{ csrf_token }}'},
+                    success: function (data) {
+                        json_data = JSON.parse(data['data']);
+                    }
+                }).done(function () {
 
-            });
+                    plotLASS(json_data);
 
-            $.ajax({
-                url: '/map/3',
-                dataType: 'json',
-                type: 'POST',
-                data: {csrfmiddlewaretoken: '{{ csrf_token }}' },
-                success: function (data) {
-                    json_data = JSON.parse(data['data']);
-                }
-            }).done(function () {
+                });
 
-                plotOpenAQ(json_data);
+                $.ajax({
+                    url: '/map/3/'+year+'-'+month+'-'+day+'/',
+                    dataType: 'json',
+                    type: 'POST',
+                    data: {csrfmiddlewaretoken: '{{ csrf_token }}'},
+                    success: function (data) {
+                        json_data = JSON.parse(data['data']);
+                    }
+                }).done(function () {
 
-            });
+                    plotOpenAQ(json_data);
+
+                });
+
+            }else {
+                var json_data;
+                $.ajax({
+                    url: '/map/1/',
+                    dataType: 'json',
+                    type: 'POST',
+                    data: {csrfmiddlewaretoken: '{{ csrf_token }}'},
+                    success: function (data) {
+                        json_data = JSON.parse(data['data']);
+                    }
+                }).done(function () {
+
+                    plotSmartCitizen(json_data);
+
+                });
+
+                $.ajax({
+                    url: '/map/2/',
+                    dataType: 'json',
+                    type: 'POST',
+                    data: {csrfmiddlewaretoken: '{{ csrf_token }}'},
+                    success: function (data) {
+                        json_data = JSON.parse(data['data']);
+                    }
+                }).done(function () {
+
+                    plotLASS(json_data);
+
+                });
+
+                $.ajax({
+                    url: '/map/3/',
+                    dataType: 'json',
+                    type: 'POST',
+                    data: {csrfmiddlewaretoken: '{{ csrf_token }}'},
+                    success: function (data) {
+                        json_data = JSON.parse(data['data']);
+                    }
+                }).done(function () {
+
+                    plotOpenAQ(json_data);
+
+                });
+            }
         }
 
     </script>

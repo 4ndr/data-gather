@@ -18,5 +18,6 @@ from django.conf.urls import url
 from . import views
 
 urlpatterns = [
-    url(r'^([0-9]{1})$', views.send_map_data, name='send_map_data'),
+    url(r'^([0-9]{1})/$', views.send_map_data, name='send_map_data'),
+    url(r'^([0-9]{1})/(\d{4}-\d{2}-\d{2})/$', views.send_map_data, name='send_map_data_date'),
 ]
