@@ -29,7 +29,7 @@ function plotSmartCitizen(jsonData) {
             sensors += '<p>' + "no2" + ': ' + jsonData[i]['data']['sensors'][3]['value'] + '</p>';
             sensors += '<p>' + "co" + ': ' + jsonData[i]['data']['sensors'][4]['value'] + '</p>';
 
-            var mymarker = new L.marker(L.latLng(parseFloat(latitude), parseFloat(longitude)))
+            var mymarker = new L.marker(L.latLng(parseFloat(latitude), parseFloat(longitude)), {icon: greenIcon})
             .bindPopup(sensors);
 
             markerClusters.addLayer(mymarker);
@@ -51,7 +51,7 @@ function plotLASS(jsonData) {
             sensors += '<p>' + "sd0" + ': ' + jsonData['feeds'][i]['s_d0'] + '</p>';
             sensors += '<p>' + "sd1" + ': ' + jsonData['feeds'][i]['s_d1'] + '</p>';
 
-            var mymarker = new L.marker(L.latLng(parseFloat(latitude), parseFloat(longitude)))
+            var mymarker = new L.marker(L.latLng(parseFloat(latitude), parseFloat(longitude)),{icon: redIcon})
             .bindPopup(sensors);
 
             markerClusters.addLayer(mymarker);
@@ -69,8 +69,8 @@ function plotOpenAQ(jsonData) {
             var sensors = '';
             sensors += '<p>' + jsonData['results'][i]['parameter'] + ': ' + jsonData['results'][i]['value'] + '</p>';
 
-            var mymarker = new L.marker(L.latLng(parseFloat(jsonData['results'][i]['coordinates']['latitude']), parseFloat(jsonData['results'][i]['coordinates']['longitude'])))
-            .bindPopup(sensors);
+            var mymarker = new L.marker(L.latLng(parseFloat(jsonData['results'][i]['coordinates']['latitude']),
+                parseFloat(jsonData['results'][i]['coordinates']['longitude'])),{icon: blueIcon}).bindPopup(sensors);
 
             markerClusters.addLayer(mymarker);
         }
