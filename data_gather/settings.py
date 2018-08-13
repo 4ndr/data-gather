@@ -25,7 +25,7 @@ SECRET_KEY = '8^9%7kbpivdu*_pd#5hs=@1lsjap+4*%gonckdhkp%^o-j)#a1'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1','ec2-13-59-83-240.us-east-2.compute.amazonaws.com']
+ALLOWED_HOSTS = ['127.0.0.1', 'ec2-13-59-83-240.us-east-2.compute.amazonaws.com']
 
 
 # Application definition
@@ -80,10 +80,10 @@ WSGI_APPLICATION = 'data_gather.wsgi.application'
 # https://docs.djangoproject.com/en/2.0/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.sqlite3',
+    #     'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    # }
 }
 
 
@@ -124,3 +124,18 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.0/howto/static-files/
 
 STATIC_URL = '/static/'
+
+ENV_VARS = dict(os.environ)
+
+
+CONFIG = {
+    "MONGODB": {
+        "default": {
+            # "host": ENV_VARS["MONGO_DEFAULT_HOST"],
+            # "base": ENV_VARS["MONGO_DEFAULT_BASE"],
+            # "username": ENV_VARS["MONGO_DEFAULT_USER"],
+            # "password": ENV_VARS["MONGO_DEFAULT_PASS"],
+            # "port": int(ENV_VARS["MONGO_DEFAULT_PORT"])
+        }
+    }
+}

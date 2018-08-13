@@ -22,5 +22,5 @@ from map import urls
 urlpatterns = [
     url(r'^$', views.show_map, name='map'),
     url(r'^map/', include(urls), name='map_ajax'),
-    url(r'^admin/', admin.site.urls),
+    # url(r'^admin/', admin.site.urls),
 ]

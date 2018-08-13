@@ -4,7 +4,6 @@ import requests
 import json
 
 
-# Create your views here.
 def show_map(request):
     template = 'map.html'
     return render(request, template)

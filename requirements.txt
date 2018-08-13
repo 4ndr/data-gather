@@ -4,7 +4,9 @@ Django==1.11
 django-geojson==2.11.0
 django-leaflet==0.23.0
 idna==2.6
+mongoengine==0.15.3
 psycopg2==2.7.4
+pymongo==3.7.1
 pytz==2018.3
 requests==2.18.4
 six==1.11.0
