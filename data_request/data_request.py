@@ -1,4 +1,12 @@
+import logging
+import datetime
+import threading
+import sys
+from datetime import timedelta
+from json import JSONDecodeError
+
 import requests
+import sys
 from mongoengine import connect
 
 from map.models import SafeCastModel, SmartCitizenModel, SmartCitizenSensor, PurpleAirModel, PurpleAirReadings
@@ -84,56 +92,204 @@ def data_request_smartcitizen():
         print("saved %d" % saved)
 
 
-def data_request_purple_air():
+def data_request_purple_air(purple_air_data, limit_start: int, limit_end: int, logger):
     """
     request the purpleair API and retrieve the data
     :return:
     """
     connect()
-    purple_air_api = requests.get('https://www.purpleair.com/json')
-    purple_air_data = purple_air_api.json()
-    count = 1
+    count = limit_start
 
-    for pa in purple_air_data['results']:
-        print("%d de %d registros salvos" % (count, len(purple_air_data['results'])))
-        purple_air_sensors_a = requests.get(
-            'https://api.thingspeak.com/channels/'+pa['THINGSPEAK_PRIMARY_ID']+'/feeds.json?'
-            'api_key='+pa['THINGSPEAK_PRIMARY_ID_READ_KEY']+'&start=2016-07-01'
-        )
-        purple_air_data_a = purple_air_sensors_a.json()
-
-        purple_air_sensors_b = requests.get(
-            'https://api.thingspeak.com/channels/' + pa['THINGSPEAK_SECONDARY_ID'] + '/feeds.json?'
-            'api_key=' + pa['THINGSPEAK_SECONDARY_ID_READ_KEY'] + '&start=2016-07-01'
-        )
-        purple_air_data_b = purple_air_sensors_b.json()
-
-        purple_air = PurpleAirModel()
-        purple_air.self_load(
-            pa['ID'], pa['ParentID'], pa['Lat'], pa['Lon'], purple_air_data_a['channel']['last_entry_id']
-        )
-
-        for reading in purple_air_data_a['feeds']:
-            readings_a = PurpleAirReadings()
-            readings_a.self_load(
-                reading['entry_id'], reading['created_at'], temperature=reading['field6'], humidity=reading['field7'],
-                pm2_5=reading['field8']
+    for pa in purple_air_data['results'][limit_start:limit_end]:
+        logger.info("Salvando o sensor %d" % pa['ID'])
+        logger.info("%d de %d" % (count, limit_end))
+        try:
+            purple_air_a = requests.get(
+                'https://api.thingspeak.com/channels/'+pa['THINGSPEAK_PRIMARY_ID']+'/feeds.json?'
+                'api_key='+pa['THINGSPEAK_PRIMARY_ID_READ_KEY']+'&start=2016-07-01'
             )
-            purple_air.readings_a.append(readings_a)
 
-        for reading in purple_air_data_b['feeds']:
-            readings_b = PurpleAirReadings()
-            readings_b.self_load(
-                reading['entry_id'], reading['created_at'], pm1=reading['field7'], pm10=reading['field8']
+            purple_air_data_a = purple_air_a.json()
+
+            purple_air_b = requests.get(
+                'https://api.thingspeak.com/channels/' + pa['THINGSPEAK_SECONDARY_ID'] +
+                '/feeds.json?api_key=' + pa['THINGSPEAK_SECONDARY_ID_READ_KEY'] + '&start=2016-07-01'
             )
-            purple_air.readings_b.append(readings_b)
 
-        if purple_air.self_validate():
-            purple_air.save()
-        else:
-            print("obj not saved")
-        count += 1
+            purple_air_data_b = purple_air_b.json()
+
+            purple_air = PurpleAirModel()
+            purple_air.self_load(
+                pa['ID'], pa['ParentID'], pa['Lat'], pa['Lon'], purple_air_data_a['channel']['last_entry_id']
+            )
+            if purple_air.self_validate():
+                purple_air.save()
+                logger.info("Sensor %d salvo, salvando as leituras..." % pa['ID'])
+            else:
+                logger.error("Sensor %d nao foi salvo..." % pa['ID'])
+                continue
+            reading_a_count = 0
+            reading_b_count = 0
+
+            if 'error' in purple_air_data_a or 'error' in purple_air_data_b:
+                continue
+
+            if purple_air_data_a['channel']['last_entry_id'] and purple_air_data_a['channel']['last_entry_id'] > 8000:
+                created_date = datetime.datetime.strptime(purple_air_data_a['channel']['created_at'], "%Y-%m-%dT%H:%M:%SZ")
+                end_date = datetime.datetime(2018, 7, 31)
+                start_date = datetime.datetime(2016, 7, 1) if created_date < datetime.datetime(2016, 7, 1) else created_date
+                date_actual = start_date + timedelta(hours=44, minutes=29)
+                while date_actual < end_date:
+                    date_formated_start = start_date.strftime("%Y-%m-%d %H:%M:%S")
+                    date_formated = date_actual.strftime("%Y-%m-%d %H:%M:%S")
+                    purple_air_sa = requests.get(
+                        'https://api.thingspeak.com/channels/'+pa['THINGSPEAK_PRIMARY_ID'] + '/feeds.json?api_key='
+                        + pa['THINGSPEAK_PRIMARY_ID_READ_KEY'] + '&start=' + date_formated_start.replace(" ", "%20")
+                        + '&end='+date_formated.replace(" ", "%20")
+                    )
+                    purple_air_sb = requests.get(
+                        'https://api.thingspeak.com/channels/' + pa['THINGSPEAK_SECONDARY_ID'] +
+                        '/feeds.json?api_key=' + pa['THINGSPEAK_SECONDARY_ID_READ_KEY'] + '&start='
+                        + date_formated_start.replace(" ", "%20") + '&end=' + date_formated.replace(" ", "%20")
+                    )
+                    
+                    purple_air_sensor_a = purple_air_sa.json()
+                    purple_air_sensor_b = purple_air_sb.json()
+
+                    start_date = date_actual
+
+                    if 'error' in purple_air_sensor_a or 'error' in purple_air_sensor_b:
+                        date_actual = date_actual + timedelta(days=2)
+                        continue
+
+                    if not purple_air_sensor_a['feeds'] and not purple_air_sensor_b['feeds']:
+                        start_date = start_date + timedelta(days=30)
+                        date_actual = date_actual + timedelta(days=30)
+                        continue
+
+                    if 0 < len(purple_air_sensor_a['feeds']) < 2000:
+                        date_actual = date_actual + timedelta(days=10)
+                    elif 2000 < len(purple_air_sensor_a['feeds']) < 4000:
+                         date_actual = date_actual + timedelta(days=6)
+                    elif 4000 < len(purple_air_sensor_a['feeds']) < 7000:
+                        date_actual = date_actual + timedelta(days=4)
+                    else:
+                        date_actual = date_actual + timedelta(days=2)
+
+                    for reading in purple_air_sensor_a['feeds']:
+                        readings_a = PurpleAirReadings()
+                        readings_a.self_load(
+                            pa['ID'], reading['entry_id'], reading['created_at'], temperature=reading['field6'],
+                            humidity=reading['field7'], pm2_5=reading['field8']
+                        )
+                        if readings_a.self_validate():
+                            readings_a.save()
+                            reading_a_count += 1
+                        else:
+                            continue
+
+                    for reading in purple_air_sensor_b['feeds']:
+                        readings_b = PurpleAirReadings()
+                        readings_b.self_load(
+                            pa['ID'], reading['entry_id'], reading['created_at'], pm1=reading['field7'],
+                            pm10=reading['field8']
+                        )
+                        if readings_b.self_validate():
+                            readings_b.save()
+                            reading_b_count += 1
+                        else:
+                            continue
+                    logger.info(
+                        "Para o sensor_id %d, [%d, %d] leituras foram salvas" % (
+                            pa['ID'], reading_a_count, reading_b_count)
+                    )
+            else:
+                for reading in purple_air_data_a['feeds']:
+                    readings_a = PurpleAirReadings()
+                    readings_a.self_load(
+                        pa['ID'], reading['entry_id'], reading['created_at'], temperature=reading['field6'],
+                        humidity=reading['field7'], pm2_5=reading['field8']
+                    )
+                    if readings_a.self_validate():
+                        readings_a.save()
+                        reading_a_count += 1
+                    else:
+                        continue
+
+                for reading in purple_air_data_b['feeds']:
+                    readings_b = PurpleAirReadings()
+                    readings_b.self_load(
+                        pa['ID'], reading['entry_id'], reading['created_at'], pm1=reading['field7'],
+                        pm10=reading['field8']
+                    )
+                    if readings_b.self_validate():
+                        readings_b.save()
+                        reading_b_count += 1
+                    else:
+                        continue
+                logger.info(
+                    "Para o sensor_id %d, [%d, %d] leituras foram salvas" % (pa['ID'], reading_a_count, reading_b_count)
+                )
+
+            logger.info("%d de %d registros salvos" % (count, limit_end))
+            count += 1
+        except JSONDecodeError as e:
+            logger.error("Erro no json: %s", e)
+            logger.info("%d de %d registros não salvo" % (count, limit_end))
+            count += 1
+            continue
+        except KeyError as e:
+            logger.error("KeyError missing %s" % e)
+            logger.info("%d de %d registros não salvo" % (count, limit_end))
+            count += 1
+            continue
+        except:
+            logger.info("%d de %d registros não salvo" % (count, limit_end))
+            count += 1
+            continue
+
+
+def call_multi_thread(proccess_number):
+    try:
+        logger = configure_log()
+        purple_air_api = requests.get('https://www.purpleair.com/json')
+        purple_air_data = purple_air_api.json()
+        if proccess_number == 1:
+            thread = threading.Thread(target=data_request_purple_air, args=(purple_air_data, 4908, 4950, logger))
+            thread.start()
+        elif proccess_number == 2:
+            thread5 = threading.Thread(target=data_request_purple_air, args=(purple_air_data, 4950, 5000, logger))
+            thread5.start()
+
+    except:
+        print("Erro ao iniciar thread")
+
+
+def configure_log():
+    logger = logging.getLogger('purpleAirAPI')
+    if logger.hasHandlers():
+        return logger
+
+    logger.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+
+    hdlr_info = logging.FileHandler('log/info4.log')
+    hdlr_info.setLevel(logging.INFO)
+    hdlr_info.setFormatter(formatter)
+    logger.addHandler(hdlr_info)
+
+    hdlr_error = logging.FileHandler('log/error4.log')
+    hdlr_error.setLevel(logging.ERROR)
+    hdlr_error.setFormatter(formatter)
+    logger.addHandler(hdlr_error)
+
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setLevel(logging.DEBUG)
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+
+    return logger
 
 
 if __name__ == '__main__':
-    data_request_purple_air()
+    call_multi_thread()

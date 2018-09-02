@@ -176,10 +176,11 @@ class SmartCitizenModel(Document):
             return False
 
 
-class PurpleAirReadings(EmbeddedDocument):
+class PurpleAirReadings(Document):
     """
     PurpleAirModel for PM2.5, Temperature and humidity
     """
+    sensor_id = IntField()
     entry_id = IntField()
     created_at = DateTimeField()
     temperature = StringField()
@@ -188,11 +189,16 @@ class PurpleAirReadings(EmbeddedDocument):
     pm1 = StringField()
     pm10 = StringField()
 
-    def self_load(self, entry_id, created_at, temperature=None, humidity=None, pm2_5=None, pm1=None, pm10=None):
+    meta = {'collection': 'PurpleAirReadings_5'}
+
+    def self_load(
+            self, sensor_id, entry_id, created_at, temperature=None, humidity=None, pm2_5=None, pm1=None, pm10=None
+    ):
         """
         load this object data
         :return: self
         """
+        self.sensor_id = sensor_id
         self.entry_id = entry_id
         self.created_at = datetime.datetime.strptime(created_at, "%Y-%m-%dT%H:%M:%SZ")
         if temperature:
@@ -229,10 +235,8 @@ class PurpleAirModel(Document):
     parent_id = IntField()
     location: List[int] = GeoPointField()
     last_entry_id = IntField()
-    readings_a: List[PurpleAirReadings] = EmbeddedDocumentListField(PurpleAirReadings, default=[])
-    readings_b: List[PurpleAirReadings] = EmbeddedDocumentListField(PurpleAirReadings, default=[])
 
-    meta = {'collection': 'PurpleAir_2'}
+    meta = {'collection': 'PurpleAir_5'}
 
     def self_load(self, device_id: str, parent_id, latitude, longitude, last_entry_id):
         """
